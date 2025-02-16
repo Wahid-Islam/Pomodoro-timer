@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 
 export default function Clock() {
@@ -14,13 +12,18 @@ export default function Clock() {
   }, []);
 
   return (
-    <div className="text-8xl font-mono font-bold text-center mb-12 tracking-wider text-gray-100">
-      {time.toLocaleTimeString('en-US', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      })}
+    <div className="text-center mb-8">
+      <div className="text-7xl font-mono font-bold text-gray-100">
+        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      </div>
+      <div className="text-gray-400 mt-2">
+        {time.toLocaleDateString([], { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        })}
+      </div>
     </div>
   );
 } 

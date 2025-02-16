@@ -83,4 +83,8 @@ body {
   .btn-secondary {
     @apply bg-gray-500 text-white hover:bg-gray-600;
   }
+
+  .btn-destructive {
+    @apply bg-red-500 text-white hover:bg-red-600;
+  }
 }

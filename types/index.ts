@@ -4,15 +4,15 @@ export interface Todo {
   completed: boolean;
   timer?: {
     isActive: boolean;
-    currentPhase: 'work' | 'break' | 'longBreak';
+    currentPhase: 'work' | 'break';
     timeRemaining: number;
     settings: TimerSettings;
+    breakCount: number;
+    totalPauseTime: number;
   };
 }
 
 export interface TimerSettings {
   workMinutes: number;
   breakMinutes: number;
-  longBreakMinutes: number;
-  sessionsBeforeLongBreak: number;
 } 
