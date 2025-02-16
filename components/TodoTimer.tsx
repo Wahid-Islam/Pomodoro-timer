@@ -176,7 +176,7 @@ export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
     }
 
     return () => clearInterval(interval);
-  }, [isActive, settings, onUpdateTimer, currentPhase, breakCount, totalPauseTime]);
+  }, [isActive, settings, onUpdateTimer, currentPhase, breakCount, totalPauseTime, handleTimerComplete, timeRemaining]);
 
   return (
     <div className="space-y-2">

@@ -1,40 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import Timer from '@/components/Timer';
 import TodoList from '@/components/TodoList';
-import { Todo, TimerSettings } from '@/types';
+import { Todo } from '@/types';
 import Clock from '@/components/Clock';
 
-const defaultSettings: TimerSettings = {
-  workMinutes: 25,
-  breakMinutes: 5
-};
-
 export default function Home() {
-  const [title, setTitle] = useState('My Pomodoro Session');
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [sessionCount, setSessionCount] = useState(0);
-
-  const handleTitleClick = () => {
-    setIsEditingTitle(true);
-  };
-
-  const handleTitleBlur = () => {
-    setIsEditingTitle(false);
-  };
-
-  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      setIsEditingTitle(false);
-    }
-  };
-
-  const handleTimerComplete = () => {
-    setSessionCount(sessionCount + 1);
-    // Add logic for switching between work and break periods
-  };
 
   const handleAddTodo = (todo: Todo) => {
     setTodos([...todos, todo]);

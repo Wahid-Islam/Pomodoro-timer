@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Todo, TimerSettings } from '@/types';
+import { Todo } from '@/types';
 import TodoTimer from './TodoTimer';
 
 interface TodoListProps {
