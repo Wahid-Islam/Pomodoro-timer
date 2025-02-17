@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Todo } from '@/types';
 import TodoTimer from './TodoTimer';
-import { Analytics } from "@vercel/analytics/react"
 
 interface TodoListProps {
   todos: Todo[];
