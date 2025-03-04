@@ -1,19 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { Todo } from '@/types';
-
-interface TodoTimerProps {
-  todo: Todo;
-  onUpdateTimer: (timerData: Todo['timer']) => void;
-}
 
 const ALARM_SOUNDS = [
   { id: 'bell', name: 'Bell', path: '/alarms/bell.mp3' },
   { id: 'digital', name: 'Digital', path: '/alarms/digital.mp3' },
-  { id: 'classic', name: 'Classic', path: '/alarms/alarm.mp3' },
-  
+  { id: 'gentle', name: 'Gentle', path: '/alarms/gentle.mp3' },
+  { id: 'classic', name: 'Classic', path: '/alarms/classic.mp3' },
+  { id: 'chime', name: 'Chime', path: '/alarms/chime.mp3' },
 ];
 
-export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
+export default function TodoTimer() {
   const [timeRemaining, setTimeRemaining] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
   const [currentPhase, setCurrentPhase] = useState<'work' | 'break'>('work');
@@ -25,24 +20,18 @@ export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    const selectedSound = ALARM_SOUNDS.find(sound => sound.id === selectedAlarm);
-    audioRef.current = new Audio(selectedSound?.path);
+    audioRef.current = new Audio(ALARM_SOUNDS.find(sound => sound.id === selectedAlarm)?.path);
     audioRef.current.loop = true;
-    
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
+      audioRef.current?.pause();
+      audioRef.current = null;
     };
   }, [selectedAlarm]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isActive && timeRemaining > 0) {
-      interval = setInterval(() => {
-        setTimeRemaining(time => time - 1);
-      }, 1000);
+      interval = setInterval(() => setTimeRemaining(time => time - 1), 1000);
     } else if (timeRemaining === 0 && isActive) {
       audioRef.current?.play().catch(console.error);
       setIsAlarmPlaying(true);
@@ -60,33 +49,7 @@ export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
     return () => clearInterval(interval);
   }, [timeRemaining, isActive, currentPhase, breakCount, settings]);
 
-  const toggleTimer = () => {
-    setIsActive(!isActive);
-  };
-
-  const stopAlarm = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    setIsAlarmPlaying(false);
-  };
-
-  const updateSettings = (key: keyof typeof settings, value: number) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-    if (key === 'workMinutes' && currentPhase === 'work') {
-      setTimeRemaining(value * 60);
-    } else if (key === 'breakMinutes' && currentPhase === 'break') {
-      setTimeRemaining(value * 60);
-    }
-  };
-
-  const getTimerColor = () => {
-    if (timeRemaining <= 10) {
-      return 'text-red-500';
-    }
-    return 'text-white';
-  };
+  const getTimerColor = () => timeRemaining <= 10 ? 'text-red-500' : 'text-white';
 
   return (
     <div className="space-y-2">
@@ -96,20 +59,21 @@ export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
         </span>
         <div className="flex flex-col gap-2">
           <button 
-            onClick={toggleTimer} 
+            onClick={() => setIsActive(!isActive)} 
             className={`btn ${isActive ? 'btn-destructive' : 'btn-primary'}`}
           >
             {isActive ? 'Pause' : 'Start'}
           </button>
-          <button 
-            onClick={() => setShowSettings(!showSettings)}
-            className="btn btn-secondary"
-          >
+          <button onClick={() => setShowSettings(!showSettings)} className="btn btn-secondary">
             ⚙️
           </button>
           {isAlarmPlaying && (
             <button 
-              onClick={stopAlarm}
+              onClick={() => {
+                audioRef.current?.pause();
+                audioRef.current!.currentTime = 0;
+                setIsAlarmPlaying(false);
+              }} 
               className="btn btn-destructive"
             >
               Stop Alarm
@@ -130,7 +94,11 @@ export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
               min="1"
               max="120"
               value={settings.workMinutes}
-              onChange={(e) => updateSettings('workMinutes', parseInt(e.target.value))}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                setSettings(prev => ({ ...prev, workMinutes: value }));
+                if (currentPhase === 'work') setTimeRemaining(value * 60);
+              }}
               className="w-16 px-2 py-1 bg-gray-600 rounded"
             />
           </label>
@@ -141,7 +109,11 @@ export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
               min="1"
               max="30"
               value={settings.breakMinutes}
-              onChange={(e) => updateSettings('breakMinutes', parseInt(e.target.value))}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                setSettings(prev => ({ ...prev, breakMinutes: value }));
+                if (currentPhase === 'break') setTimeRemaining(value * 60);
+              }}
               className="w-16 px-2 py-1 bg-gray-600 rounded"
             />
           </label>
@@ -153,9 +125,7 @@ export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
               className="w-32 px-2 py-1 bg-gray-600 rounded"
             >
               {ALARM_SOUNDS.map(sound => (
-                <option key={sound.id} value={sound.id}>
-                  {sound.name}
-                </option>
+                <option key={sound.id} value={sound.id}>{sound.name}</option>
               ))}
             </select>
           </label>
