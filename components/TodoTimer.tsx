@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Todo } from '@/types';
 
 interface TodoTimerProps {
@@ -6,199 +6,118 @@ interface TodoTimerProps {
   onUpdateTimer: (timerData: Todo['timer']) => void;
 }
 
+const ALARM_SOUNDS = [
+  { id: 'bell', name: 'Bell', path: '/alarms/bell.mp3' },
+  { id: 'digital', name: 'Digital', path: '/alarms/digital.mp3' },
+  { id: 'classic', name: 'Classic', path: '/alarms/alarm.mp3' },
+  
+];
+
 export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
-  const defaultTimer = {
-    isActive: false,
-    currentPhase: 'work' as const,
-    timeRemaining: 25 * 60,
-    settings: {
-      workMinutes: 25,
-      breakMinutes: 5
-    }
-  };
-
-  const [settings, setSettings] = useState(todo.timer?.settings || defaultTimer.settings);
-  const [timeRemaining, setTimeRemaining] = useState(
-    todo.timer?.timeRemaining || settings.workMinutes * 60
-  );
-  const [isActive, setIsActive] = useState(todo.timer?.isActive || false);
+  const [timeRemaining, setTimeRemaining] = useState(25 * 60);
+  const [isActive, setIsActive] = useState(false);
+  const [currentPhase, setCurrentPhase] = useState<'work' | 'break'>('work');
+  const [breakCount, setBreakCount] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
-  const [breakCount, setBreakCount] = useState(todo.timer?.breakCount || 4);
-  const [currentPhase, setCurrentPhase] = useState<'work' | 'break'>(todo.timer?.currentPhase || 'work');
-  const [totalPauseTime, setTotalPauseTime] = useState(0);
-  const [pauseStartTime, setPauseStartTime] = useState<number | null>(null);
+  const [settings, setSettings] = useState({ workMinutes: 25, breakMinutes: 1 });
+  const [selectedAlarm, setSelectedAlarm] = useState(ALARM_SOUNDS[0].id);
+  const [isAlarmPlaying, setIsAlarmPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const updateSettings = (key: keyof typeof settings, value: number) => {
-    const newSettings = { ...settings, [key]: value };
-    const newTimeRemaining = key === 'workMinutes' ? value * 60 : timeRemaining;
-    const newBreakCount = key === 'breakMinutes' ? value : breakCount;
+  useEffect(() => {
+    const selectedSound = ALARM_SOUNDS.find(sound => sound.id === selectedAlarm);
+    audioRef.current = new Audio(selectedSound?.path);
+    audioRef.current.loop = true;
     
-    setSettings(newSettings);
-    setTimeRemaining(newTimeRemaining);
-    setBreakCount(newBreakCount);
-    setIsActive(false);
-    
-    onUpdateTimer({
-      isActive: false,
-      currentPhase: 'work',
-      settings: newSettings,
-      timeRemaining: newTimeRemaining,
-      breakCount: newBreakCount,
-      totalPauseTime
-    });
-  };
-
-  const resetTimer = () => {
-    setIsActive(false);
-    setTimeRemaining(settings.workMinutes * 60);
-    setBreakCount(4);
-    setCurrentPhase('work');
-    
-    onUpdateTimer({
-      isActive: false,
-      currentPhase: 'work',
-      settings,
-      timeRemaining: settings.workMinutes * 60,
-      breakCount: 4,
-      totalPauseTime: 0
-    });
-  };
-
-  const toggleTimer = () => {
-    if (breakCount === 0 && !isActive) {
-      resetTimer();
-      return;
-    }
-
-    const newIsActive = !isActive;
-    
-    if (newIsActive) {
-      if (pauseStartTime) {
-        const pauseDuration = Math.floor((Date.now() - pauseStartTime) / 1000);
-        setTotalPauseTime(prev => prev + pauseDuration);
-        setPauseStartTime(null);
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
       }
-    } else {
-      setPauseStartTime(Date.now());
-    }
-
-    if (!newIsActive && currentPhase === 'work') {
-      const newBreakCount = breakCount > 0 ? breakCount - 1 : 0;
-      setBreakCount(newBreakCount);
-      onUpdateTimer({
-        isActive: newIsActive,
-        currentPhase,
-        settings,
-        timeRemaining,
-        breakCount: newBreakCount,
-        totalPauseTime
-      });
-    } else {
-      onUpdateTimer({
-        isActive: newIsActive,
-        currentPhase,
-        settings,
-        timeRemaining,
-        breakCount,
-        totalPauseTime
-      });
-    }
-    
-    setIsActive(newIsActive);
-  };
-
-  const handleTimerComplete = () => {
-    if (timeRemaining === 0) {
-      if (currentPhase === 'work') {
-        setCurrentPhase('break');
-        setTimeRemaining(settings.breakMinutes * 60);
-        setIsActive(false);
-        
-        onUpdateTimer({
-          isActive: false,
-          currentPhase: 'break',
-          settings,
-          timeRemaining: settings.breakMinutes * 60,
-          breakCount,
-          totalPauseTime
-        });
-      } else {
-        setCurrentPhase('work');
-        setTimeRemaining(settings.workMinutes * 60);
-        setIsActive(false);
-        
-        onUpdateTimer({
-          isActive: false,
-          currentPhase: 'work',
-          settings,
-          timeRemaining: settings.workMinutes * 60,
-          breakCount,
-          totalPauseTime
-        });
-      }
-    }
-  };
-
-  const formatPauseTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${remainingSeconds}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${remainingSeconds}s`;
-    }
-    return `${remainingSeconds}s`;
-  };
+    };
+  }, [selectedAlarm]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
     if (isActive && timeRemaining > 0) {
       interval = setInterval(() => {
-        setTimeRemaining(prev => {
-          const newTime = prev - 1;
-          if (newTime === 0) {
-            handleTimerComplete();
-          }
-          onUpdateTimer({
-            isActive: newTime > 0,
-            currentPhase,
-            settings,
-            timeRemaining: newTime,
-            breakCount,
-            totalPauseTime
-          });
-          return newTime;
-        });
+        setTimeRemaining(time => time - 1);
       }, 1000);
+    } else if (timeRemaining === 0 && isActive) {
+      audioRef.current?.play().catch(console.error);
+      setIsAlarmPlaying(true);
+      setIsActive(false);
+      
+      if (currentPhase === 'work' && breakCount > 0) {
+        setCurrentPhase('break');
+        setTimeRemaining(settings.breakMinutes * 60);
+        setBreakCount(count => count - 1);
+      } else {
+        setCurrentPhase('work');
+        setTimeRemaining(settings.workMinutes * 60);
+      }
     }
-
     return () => clearInterval(interval);
-  }, [isActive, settings, onUpdateTimer, currentPhase, breakCount, totalPauseTime, handleTimerComplete, timeRemaining]);
+  }, [timeRemaining, isActive, currentPhase, breakCount, settings]);
+
+  const toggleTimer = () => {
+    setIsActive(!isActive);
+  };
+
+  const stopAlarm = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setIsAlarmPlaying(false);
+  };
+
+  const updateSettings = (key: keyof typeof settings, value: number) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+    if (key === 'workMinutes' && currentPhase === 'work') {
+      setTimeRemaining(value * 60);
+    } else if (key === 'breakMinutes' && currentPhase === 'break') {
+      setTimeRemaining(value * 60);
+    }
+  };
+
+  const getTimerColor = () => {
+    if (timeRemaining <= 10) {
+      return 'text-red-500';
+    }
+    return 'text-white';
+  };
 
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-3">
-        <span className="font-mono text-xl">
+        <span className={`font-mono text-4xl font-bold ${getTimerColor()} transition-colors`}>
           {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
         </span>
-        <button 
-          onClick={toggleTimer} 
-          className={`btn ${breakCount === 0 && !isActive ? 'btn-destructive' : 'btn-primary'}`}
-        >
-          {isActive ? 'Pause' : breakCount === 0 ? 'Stop' : 'Start'}
-        </button>
-        <button 
-          onClick={() => setShowSettings(!showSettings)}
-          className="btn btn-secondary"
-        >
-          ⚙️
-        </button>
-        <div className="text-sm text-gray-400 flex flex-col">
-          <span>{currentPhase === 'work' ? 'Work' : 'Break'} • {breakCount} breaks left</span>
-          <span>Total pause: {formatPauseTime(totalPauseTime)}</span>
+        <div className="flex flex-col gap-2">
+          <button 
+            onClick={toggleTimer} 
+            className={`btn ${isActive ? 'btn-destructive' : 'btn-primary'}`}
+          >
+            {isActive ? 'Pause' : 'Start'}
+          </button>
+          <button 
+            onClick={() => setShowSettings(!showSettings)}
+            className="btn btn-secondary"
+          >
+            ⚙️
+          </button>
+          {isAlarmPlaying && (
+            <button 
+              onClick={stopAlarm}
+              className="btn btn-destructive"
+            >
+              Stop Alarm
+            </button>
+          )}
+        </div>
+        <div className="text-sm text-gray-400">
+          {currentPhase === 'work' ? 'Work' : 'Break'} • {breakCount} breaks left
         </div>
       </div>
 
@@ -225,6 +144,20 @@ export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
               onChange={(e) => updateSettings('breakMinutes', parseInt(e.target.value))}
               className="w-16 px-2 py-1 bg-gray-600 rounded"
             />
+          </label>
+          <label className="flex items-center justify-between gap-2">
+            Alarm:
+            <select
+              value={selectedAlarm}
+              onChange={(e) => setSelectedAlarm(e.target.value)}
+              className="w-32 px-2 py-1 bg-gray-600 rounded"
+            >
+              {ALARM_SOUNDS.map(sound => (
+                <option key={sound.id} value={sound.id}>
+                  {sound.name}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
       )}
