@@ -1,20 +1,37 @@
+import { Todo } from '@/types';
 import { useEffect, useRef, useState } from 'react';
 
 const ALARM_SOUNDS = [
   { id: 'bell', name: 'Bell', path: '/alarms/bell.mp3' },
   { id: 'digital', name: 'Digital', path: '/alarms/digital.mp3' },
-  { id: 'gentle', name: 'Gentle', path: '/alarms/gentle.mp3' },
-  { id: 'classic', name: 'Classic', path: '/alarms/classic.mp3' },
-  { id: 'chime', name: 'Chime', path: '/alarms/chime.mp3' },
+  { id: 'classic', name: 'Classic', path: '/alarms/alarm.mp3' },
+
 ];
 
-export default function TodoTimer() {
+interface TimerSettings {
+  workMinutes: number;
+  breakMinutes: number;
+}
+
+interface TodoTimerProps {
+  todo: Todo;
+  onUpdateTimer: (timerData: {
+    isActive: boolean;
+    currentPhase: 'work' | 'break';
+    timeRemaining: number;
+    settings: TimerSettings;
+    breakCount: number;
+    totalPauseTime: number;
+  }) => void;
+}
+
+export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
   const [timeRemaining, setTimeRemaining] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
   const [currentPhase, setCurrentPhase] = useState<'work' | 'break'>('work');
   const [breakCount, setBreakCount] = useState(1);
   const [showSettings, setShowSettings] = useState(false);
-  const [settings, setSettings] = useState({ workMinutes: 25, breakMinutes: 1 });
+  const [settings, setSettings] = useState<TimerSettings>({ workMinutes: 25, breakMinutes: 1 });
   const [selectedAlarm, setSelectedAlarm] = useState(ALARM_SOUNDS[0].id);
   const [isAlarmPlaying, setIsAlarmPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -50,6 +67,21 @@ export default function TodoTimer() {
   }, [timeRemaining, isActive, currentPhase, breakCount, settings]);
 
   const getTimerColor = () => timeRemaining <= 10 ? 'text-red-500' : 'text-white';
+
+  const updateTimerData = () => {
+    onUpdateTimer({
+      isActive,
+      currentPhase,
+      timeRemaining,
+      settings,
+      breakCount,
+      totalPauseTime: 0
+    });
+  };
+
+  useEffect(() => {
+    updateTimerData();
+  }, [isActive, currentPhase, timeRemaining, settings, breakCount]);
 
   return (
     <div className="space-y-2">
