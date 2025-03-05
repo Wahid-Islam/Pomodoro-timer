@@ -1,4 +1,4 @@
-import { Todo } from '@/types';
+
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 const ALARM_SOUNDS = [
