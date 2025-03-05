@@ -1,11 +1,10 @@
 import { Todo } from '@/types';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 const ALARM_SOUNDS = [
   { id: 'bell', name: 'Bell', path: '/alarms/bell.mp3' },
   { id: 'digital', name: 'Digital', path: '/alarms/digital.mp3' },
   { id: 'classic', name: 'Classic', path: '/alarms/alarm.mp3' },
-
 ];
 
 interface TimerSettings {
@@ -14,7 +13,6 @@ interface TimerSettings {
 }
 
 interface TodoTimerProps {
-  todo: Todo;
   onUpdateTimer: (timerData: {
     isActive: boolean;
     currentPhase: 'work' | 'break';
@@ -25,7 +23,7 @@ interface TodoTimerProps {
   }) => void;
 }
 
-export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
+export default function TodoTimer({ onUpdateTimer }: TodoTimerProps) {
   const [timeRemaining, setTimeRemaining] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
   const [currentPhase, setCurrentPhase] = useState<'work' | 'break'>('work');
@@ -53,7 +51,7 @@ export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
       audioRef.current?.play().catch(console.error);
       setIsAlarmPlaying(true);
       setIsActive(false);
-      
+
       if (currentPhase === 'work' && breakCount > 0) {
         setCurrentPhase('break');
         setTimeRemaining(settings.breakMinutes * 60);
@@ -66,9 +64,9 @@ export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
     return () => clearInterval(interval);
   }, [timeRemaining, isActive, currentPhase, breakCount, settings]);
 
-  const getTimerColor = () => timeRemaining <= 10 ? 'text-red-500' : 'text-white';
+  const getTimerColor = () => (timeRemaining <= 10 ? 'text-red-500' : 'text-white');
 
-  const updateTimerData = () => {
+  const updateTimerData = useCallback(() => {
     onUpdateTimer({
       isActive,
       currentPhase,
@@ -77,11 +75,11 @@ export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
       breakCount,
       totalPauseTime: 0
     });
-  };
+  }, [isActive, currentPhase, timeRemaining, settings, breakCount, onUpdateTimer]);
 
   useEffect(() => {
     updateTimerData();
-  }, [isActive, currentPhase, timeRemaining, settings, breakCount]);
+  }, [updateTimerData]);
 
   return (
     <div className="space-y-2">
@@ -165,4 +163,4 @@ export default function TodoTimer({ todo, onUpdateTimer }: TodoTimerProps) {
       )}
     </div>
   );
-} 
+}
